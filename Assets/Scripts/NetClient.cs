@@ -6,12 +6,14 @@ using UnityEngine;
 using UnityEditor;
 using System.IO;
 using System;
+using TMPro;
 
 public class NetClient : MonoSingleton<NetClient>
 {
 	public static int ClientID = 0;
 	private string serverIP;
 	private Socket socket = null;
+	[SerializeField] private TextMeshProUGUI idUI = null;	
 	
 	public Socket Socket
 	{
@@ -27,6 +29,8 @@ public class NetClient : MonoSingleton<NetClient>
 	}
 	private void Start()
 	{
+		Application.runInBackground = true;
+		Screen.SetResolution(1366, 768, false);
 		CreateSocket(ServerConfig.LocalServerIP);
 	}
 	public void CreateSocket(string argServerIP)
@@ -57,18 +61,12 @@ public class NetClient : MonoSingleton<NetClient>
 		while(true)
 		{
 			if (socket.Poll(0, SelectMode.SelectRead) == false) continue;
+
 			byte[] bytes = new byte[512];
 			socket.Receive(bytes);
 			ClientID = BitConverter.ToInt32(bytes, 0);
 			Debug.Log($"Got unique ID : {ClientID}");
-			//using (MemoryStream ms = new MemoryStream(bytes))
-			//{
-			//	using(BinaryReader br = new BinaryReader(ms))
-			//	{
-			//		ClientID = br.ReadInt32();
-			//		Debug.Log($"Got unique ID : {ClientID}");
-			//	}
-			//}
+			idUI.text = ClientID.ToString();
 			break;
 		}
 	}
@@ -81,38 +79,11 @@ public class NetClient : MonoSingleton<NetClient>
 			return;
 		}
 		byte[] sendData = Bullet.ToByteArray(bulletPacket);
-		byte[] bufferSize = new byte[1];
-		bufferSize[0] = (byte)sendData.Length;
-		socket.Send(bufferSize);
+		//byte[] bufferSize = new byte[1];
+		//bufferSize[0] = (byte)sendData.Length;
+		//socket.Send(bufferSize);
 		socket.Send(sendData);
 		Debug.Log($"Client send packet");
-	}
-	public Bullet ReceiveOtherBullets()
-	{
-		if (socket == null) return null;
-		List<byte> buffer = new List<byte>();
-		byte[] bytes = new byte[512];
-		try
-		{
-			int read = socket.Receive(bytes);
-			for(int i = 0; i < read; i++)
-			{
-				buffer.Add(bytes[i]);
-			}
-			if (buffer.Count > 0)
-			{
-				Debug.Log("Success!!");
-				return null;
-			}
-		}
-		catch(System.Exception e)
-		{
-			Debug.LogError(e.ToString());
-			return null;
-		}
-		Debug.Log("Received.");
-		Bullet bullet = Bullet.FromByteArray(bytes);
-		return bullet;
 	}
 	public void SetIP(string targetIP)
 	{
