@@ -21,7 +21,6 @@ public class Player : MonoBehaviour
 		sendTimer = 0f;
 
 		Bullet bullet = new Bullet();
-		bullet.name = "Red Bullet";
 		bullet.position = this.transform.position;
 
 		NetClient.Instance.SendBulletPacket(bullet);

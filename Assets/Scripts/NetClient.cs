@@ -4,11 +4,19 @@ using System.Net.Sockets;
 using System.Net;
 using UnityEngine;
 using UnityEditor;
+using System.IO;
+using System;
 
 public class NetClient : MonoSingleton<NetClient>
 {
+	public static int ClientID = 0;
 	private string serverIP;
 	private Socket socket = null;
+	
+	public Socket Socket
+	{
+		get { return socket; }
+	}
 	public bool IsConnected
 	{
 		get
@@ -45,6 +53,24 @@ public class NetClient : MonoSingleton<NetClient>
 			return;
 		}
 		Debug.Log("Client Socket Created and connected");
+		
+		while(true)
+		{
+			if (socket.Poll(0, SelectMode.SelectRead) == false) continue;
+			byte[] bytes = new byte[512];
+			socket.Receive(bytes);
+			ClientID = BitConverter.ToInt32(bytes, 0);
+			Debug.Log($"Got unique ID : {ClientID}");
+			//using (MemoryStream ms = new MemoryStream(bytes))
+			//{
+			//	using(BinaryReader br = new BinaryReader(ms))
+			//	{
+			//		ClientID = br.ReadInt32();
+			//		Debug.Log($"Got unique ID : {ClientID}");
+			//	}
+			//}
+			break;
+		}
 	}
 	public void SendBulletPacket(Bullet bulletPacket)
 	{
@@ -59,13 +85,32 @@ public class NetClient : MonoSingleton<NetClient>
 		bufferSize[0] = (byte)sendData.Length;
 		socket.Send(bufferSize);
 		socket.Send(sendData);
-		Debug.Log($"Client send packet {bulletPacket.name}");
+		Debug.Log($"Client send packet");
 	}
 	public Bullet ReceiveOtherBullets()
 	{
+		if (socket == null) return null;
+		List<byte> buffer = new List<byte>();
 		byte[] bytes = new byte[512];
-		socket.Receive(bytes);
-		
+		try
+		{
+			int read = socket.Receive(bytes);
+			for(int i = 0; i < read; i++)
+			{
+				buffer.Add(bytes[i]);
+			}
+			if (buffer.Count > 0)
+			{
+				Debug.Log("Success!!");
+				return null;
+			}
+		}
+		catch(System.Exception e)
+		{
+			Debug.LogError(e.ToString());
+			return null;
+		}
+		Debug.Log("Received.");
 		Bullet bullet = Bullet.FromByteArray(bytes);
 		return bullet;
 	}
